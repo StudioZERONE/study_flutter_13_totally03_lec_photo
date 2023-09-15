@@ -1,5 +1,9 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 
@@ -20,6 +24,7 @@ class PhotoViewPage extends StatefulWidget {
 class _PhotoViewPageState extends State<PhotoViewPage> {
   int currentPageIndex = 0;
   late PageController _controller;
+  bool _isDownloading = false;
 
   @override
   void initState() {
@@ -32,6 +37,28 @@ class _PhotoViewPageState extends State<PhotoViewPage> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void downloadImage(String imageUrl) async {
+    setState(() {
+      _isDownloading = true;
+    });
+
+    var response = await Dio()
+        .get(imageUrl, options: Options(responseType: ResponseType.bytes));
+
+    final result =
+        await ImageGallerySaver.saveImage(Uint8List.fromList(response.data));
+
+    if (result['isSuccess']) {
+      print('Download Complete.');
+    } else {
+      print('Downloading Error');
+    }
+
+    setState(() {
+      _isDownloading = false;
+    });
   }
 
   @override
@@ -83,6 +110,24 @@ class _PhotoViewPageState extends State<PhotoViewPage> {
               child: Text(
                 '${currentPageIndex + 1} / ${widget.imagePaths.length}',
                 style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomRight,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 25, right: 25),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                onPressed: () {
+                  if (!_isDownloading) {
+                    downloadImage(widget.imagePaths[currentPageIndex]);
+                  }
+                },
+                icon: const Icon(Icons.download),
               ),
             ),
           ),
